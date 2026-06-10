@@ -61,7 +61,7 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Stream<Resource<bool>> addTask(AddTaskReqModel reqBody) async* {
+  Stream<Resource<TaskDataModel>> addTask(AddTaskReqModel reqBody) async* {
     try {
       yield Resource.loading();
       final task = TaskDataModel(
@@ -69,13 +69,14 @@ class TaskRepositoryImpl implements TaskRepository {
         title: reqBody.title,
         description: reqBody.description,
         createdAt: DateTime.now(),
+        dueDate: reqBody.dueDate,
       );
       await _localDatasource.insertTask(task);
       debugPrint('Task added: ${task.id}');
-      yield Resource.success(true);
+      yield Resource.success(task);
     } on DioException catch (e) {
       debugPrint('addTask error: $e');
-      yield ExceptionUtil.handleDioException<bool>(e);
+      yield ExceptionUtil.handleDioException<TaskDataModel>(e);
     }
   }
 

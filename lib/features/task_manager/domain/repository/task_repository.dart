@@ -9,7 +9,7 @@ abstract class TaskRepository {
     Map<String, String> headers,
   );
 
-  Stream<Resource<bool>> addTask(
+  Stream<Resource<TaskDataModel>> addTask(
     AddTaskReqModel reqBody,
   );
 

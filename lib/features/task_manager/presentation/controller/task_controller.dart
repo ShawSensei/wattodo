@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/util/resource.dart';
 import '../../domain/model/data_model/task_data_model.dart';
 import '../../domain/model/request_model/add_task_req_model.dart';
@@ -10,8 +11,9 @@ enum TaskFilter { all, active, done }
 
 class TaskController extends GetxController {
   final TaskUseCases _useCases;
+  final NotificationService _notificationService;
 
-  TaskController(this._useCases);
+  TaskController(this._useCases, this._notificationService);
 
   final RxList<TaskDataModel> tasks = <TaskDataModel>[].obs;
   final RxBool isLoading = false.obs;
@@ -73,6 +75,8 @@ class TaskController extends GetxController {
       } else if (resource.status == Status.success) {
         tasks.assignAll(resource.data ?? []);
         isLoading.value = false;
+        // Keep daily briefing count in sync with the live pending count
+        _notificationService.scheduleDailyBriefing(pendingCount);
       } else {
         errorMessage.value = resource.errorMessage ?? 'Failed to load tasks';
         isLoading.value = false;
@@ -81,21 +85,36 @@ class TaskController extends GetxController {
   }
 
   Future<void> addTask(AddTaskReqModel req) async {
+    TaskDataModel? createdTask;
+
     await for (final resource in _useCases.addTaskBusiness(req)) {
-      if (resource.status == Status.error) {
+      if (resource.status == Status.success) {
+        createdTask = resource.data;
+      } else if (resource.status == Status.error) {
         errorMessage.value = resource.errorMessage ?? 'Failed to add task';
         return;
       }
     }
+
     _loadTasks();
+
+    if (createdTask != null && createdTask.dueDate != null) {
+      await _notificationService.scheduleTaskReminder(
+        id: createdTask.id,
+        title: createdTask.title,
+        dueDate: createdTask.dueDate!,
+      );
+    }
   }
 
   // Optimistic update — flip in-memory immediately, persist async, revert on failure.
   // Avoids the list flicker you'd get from waiting on a DB round-trip before updating UI.
   Future<void> toggleTask(TaskDataModel task) async {
     final idx = tasks.indexWhere((t) => t.id == task.id);
+    final willComplete = !task.isCompleted;
+
     if (idx != -1) {
-      tasks[idx] = task.copyWith(isCompleted: !task.isCompleted);
+      tasks[idx] = task.copyWith(isCompleted: willComplete);
     }
 
     await for (final resource in _useCases.toggleTaskBusiness(task)) {
@@ -104,6 +123,20 @@ class TaskController extends GetxController {
         errorMessage.value = resource.errorMessage ?? 'Failed to update task';
         return;
       }
+    }
+
+    if (willComplete) {
+      await _notificationService.cancelTaskReminder(task.id);
+      if (tasks.every((t) => t.isCompleted)) {
+        await _notificationService.showAllDoneNotification();
+      }
+    } else if (task.dueDate != null) {
+      // Uncompleting — restore the scheduled reminder if due date still in the future
+      await _notificationService.scheduleTaskReminder(
+        id: task.id,
+        title: task.title,
+        dueDate: task.dueDate!,
+      );
     }
   }
 
@@ -119,6 +152,8 @@ class TaskController extends GetxController {
         return;
       }
     }
+
+    await _notificationService.cancelTaskReminder(id);
   }
 
   // Re-inserts at the clamped original position so the item reappears where it was
@@ -132,6 +167,14 @@ class TaskController extends GetxController {
         errorMessage.value = resource.errorMessage ?? 'Failed to restore task';
         return;
       }
+    }
+
+    if (!task.isCompleted && task.dueDate != null) {
+      await _notificationService.scheduleTaskReminder(
+        id: task.id,
+        title: task.title,
+        dueDate: task.dueDate!,
+      );
     }
   }
 }

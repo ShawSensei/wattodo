@@ -5,7 +5,7 @@ import '../../../../../core/constant/app_colors.dart';
 import '../../controller/task_controller.dart';
 import '../../../domain/model/request_model/add_task_req_model.dart';
 
-// StatefulWidget for local form state (_controllers, _isSaving) that doesn't belong in the global controller
+// StatefulWidget for local form state (_controllers, _isSaving, _dueDate) that doesn't belong in the global controller
 class AddTaskSheet extends StatefulWidget {
   const AddTaskSheet({super.key});
 
@@ -18,12 +18,69 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
   bool _isSaving = false;
+  DateTime? _dueDate;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDueDate() async {
+    FocusScope.of(context).unfocus();
+    final now = DateTime.now();
+    final initial = _dueDate ?? now.add(const Duration(hours: 1));
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (time == null || !mounted) return;
+
+    setState(() {
+      _dueDate = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
+  String _formatDueDate(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final dateOnly = DateTime(dt.year, dt.month, dt.day);
+
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+
+    if (dateOnly == today) return 'Today at $h:$m';
+    if (dateOnly == tomorrow) return 'Tomorrow at $h:$m';
+    return '${dt.day}/${dt.month}/${dt.year} at $h:$m';
   }
 
   Future<void> _submit() async {
@@ -39,6 +96,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       AddTaskReqModel(
         title: _titleController.text.trim(),
         description: _descController.text.trim(),
+        dueDate: _dueDate,
       ),
     );
 
@@ -102,7 +160,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                             color: AppColors.textPrimary,
                           ),
                           decoration: _fieldDecoration(
-                              hint: 'e.g. Buy groceries'),
+                            hint: 'e.g. Buy groceries',
+                          ),
                           validator: (v) => (v == null || v.trim().isEmpty)
                               ? 'Title is required'
                               : null,
@@ -123,12 +182,29 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                             color: AppColors.textPrimary,
                           ),
                           decoration: _fieldDecoration(
-                              hint: 'Add more details...'),
+                            hint: 'Add more details...',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _LabeledField(
+                        label: 'Remind Me',
+                        child: _DueDatePicker(
+                          dueDate: _dueDate,
+                          formatted: _dueDate != null
+                              ? _formatDueDate(_dueDate!)
+                              : null,
+                          onTap: _pickDueDate,
+                          onClear: () => setState(() => _dueDate = null),
                         ),
                       ),
                       const SizedBox(height: 24),
                       _SubmitButton(isSaving: _isSaving, onTap: _submit),
-                      SizedBox(height: viewInsets > 0 ? viewInsets : bottomPadding + 16),
+                      SizedBox(
+                        height: viewInsets > 0
+                            ? viewInsets
+                            : bottomPadding + 16,
+                      ),
                     ],
                   ),
                 ),
@@ -150,8 +226,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Color(0xFFBDD0E7)),
@@ -162,7 +237,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -171,6 +246,73 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+      ),
+    );
+  }
+}
+
+class _DueDatePicker extends StatelessWidget {
+  final DateTime? dueDate;
+  final String? formatted;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  const _DueDatePicker({
+    required this.dueDate,
+    required this.formatted,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDate = dueDate != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: hasDate ? AppColors.surface : Colors.white,
+          border: Border.all(
+            color: hasDate
+                ? AppColors.primary.withValues(alpha: 0.4)
+                : const Color(0xFFBDD0E7),
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.access_time_rounded,
+              size: 16,
+              color: hasDate ? AppColors.primary : AppColors.textHint,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                formatted ?? 'Set due date & time (optional)',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: hasDate ? FontWeight.w500 : FontWeight.w400,
+                  color: hasDate ? AppColors.textPrimary : AppColors.textHint,
+                ),
+              ),
+            ),
+            if (hasDate)
+              GestureDetector(
+                onTap: onClear,
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 8),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -252,10 +394,7 @@ class _SheetHeader extends StatelessWidget {
             ),
             Text(
               'What do you need to do?',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -317,8 +456,7 @@ class _SubmitButton extends StatelessWidget {
                   : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_rounded,
-                            color: Colors.white, size: 18),
+                        Icon(Icons.add_rounded, color: Colors.white, size: 18),
                         SizedBox(width: 7),
                         Text(
                           'Add Task',

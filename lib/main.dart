@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
 import 'core/constant/app_colors.dart';
 import 'core/di/core_module.dart';
+import 'core/services/notification_service.dart';
 import 'features/task_manager/di/task_module.dart';
 import 'features/task_manager/presentation/ui/screens/task_list_screen.dart';
 
@@ -14,6 +15,10 @@ Future<void> main() async {
 
   await CoreModule.dependencies(getIt);
   TaskModule.dependencies(getIt);
+
+  final notifications = getIt<NotificationService>();
+  await notifications.init();
+  await notifications.requestPermission();
 
   runApp(const WattodoApp());
 }

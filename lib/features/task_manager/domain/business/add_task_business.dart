@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../../core/util/resource.dart';
+import '../model/data_model/task_data_model.dart';
 import '../model/request_model/add_task_req_model.dart';
 import '../repository/task_repository.dart';
 
@@ -9,7 +10,7 @@ class AddTaskBusiness {
 
   AddTaskBusiness(this._repository);
 
-  Stream<Resource<bool>> call(AddTaskReqModel req) async* {
+  Stream<Resource<TaskDataModel>> call(AddTaskReqModel req) async* {
     try {
       await for (final response in _repository.addTask(req)) {
         yield response;

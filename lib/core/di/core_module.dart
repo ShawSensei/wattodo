@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import '../network/base_url.dart';
+import '../services/notification_service.dart';
 import '../util/database_helper.dart';
 
 // Registers app-wide infrastructure that every feature may need
@@ -22,5 +23,7 @@ abstract class CoreModule {
     getIt.registerSingleton<Dio>(dio);
 
     getIt.registerLazySingleton<DatabaseHelper>(() => DatabaseHelper());
+
+    getIt.registerLazySingleton<NotificationService>(() => NotificationService());
   }
 }

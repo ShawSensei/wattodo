@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/util/database_helper.dart';
 import '../data/datasources/api/task_api.dart';
 import '../data/datasources/local/task_local_datasource.dart';
@@ -65,7 +66,7 @@ class TaskModule {
     // Controller uses Get.lazyPut (not GetIt) so navigation lifecycle manages it.
     // fenix:true lets GetX recreate it if the user navigates away and back.
     Get.lazyPut<TaskController>(
-      () => TaskController(getIt<TaskUseCases>()),
+      () => TaskController(getIt<TaskUseCases>(), getIt<NotificationService>()),
       fenix: true,
     );
   }

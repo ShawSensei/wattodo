@@ -70,8 +70,7 @@ class TaskTileWidget extends StatelessWidget {
               ],
             ),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -119,7 +118,11 @@ class TaskTileWidget extends StatelessWidget {
                           ),
                         ],
                         const SizedBox(height: 8),
-                        _TaskMeta(createdAt: task.createdAt),
+                        _TaskMeta(
+                          createdAt: task.createdAt,
+                          dueDate: task.dueDate,
+                          isCompleted: task.isCompleted,
+                        ),
                       ],
                     ),
                   ),
@@ -252,8 +255,14 @@ class _AnimatedCheck extends StatelessWidget {
 
 class _TaskMeta extends StatelessWidget {
   final DateTime createdAt;
+  final DateTime? dueDate;
+  final bool isCompleted;
 
-  const _TaskMeta({required this.createdAt});
+  const _TaskMeta({
+    required this.createdAt,
+    this.dueDate,
+    required this.isCompleted,
+  });
 
   String _elapsed(DateTime now) {
     final diff = now.difference(createdAt);
@@ -272,28 +281,73 @@ class _TaskMeta extends StatelessWidget {
     return '${months[createdAt.month - 1]} ${createdAt.day}';
   }
 
+  String _dueDateLabel(DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final dateOnly = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+    final h = dueDate!.hour.toString().padLeft(2, '0');
+    final m = dueDate!.minute.toString().padLeft(2, '0');
+    if (dateOnly == today) return 'Due today at $h:$m';
+    if (dateOnly == tomorrow) return 'Due tomorrow at $h:$m';
+    if (dueDate!.isBefore(now)) return 'Overdue';
+    return 'Due ${dueDate!.day}/${dueDate!.month} at $h:$m';
+  }
+
+  Color _dueDateColor(DateTime now) {
+    if (dueDate == null) return AppColors.primaryLight;
+    if (dueDate!.isBefore(now)) return AppColors.error;
+    if (dueDate!.difference(now).inHours < 2) return AppColors.warning;
+    return AppColors.primaryLight;
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _elapsed(now),
-          style: const TextStyle(
-            color: AppColors.textHint,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
+        Row(
+          children: [
+            Text(
+              _elapsed(now),
+              style: const TextStyle(
+                color: AppColors.textHint,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              _shortDate(),
+              style: const TextStyle(
+                color: AppColors.textHint,
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ],
         ),
-        const Spacer(),
-        Text(
-          _shortDate(),
-          style: const TextStyle(
-            color: AppColors.textHint,
-            fontSize: 11,
-            fontWeight: FontWeight.w400,
+        if (dueDate != null && !isCompleted) ...[
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Icon(
+                Icons.access_time_rounded,
+                size: 11,
+                color: _dueDateColor(now),
+              ),
+              const SizedBox(width: 3),
+              Text(
+                _dueDateLabel(now),
+                style: TextStyle(
+                  color: _dueDateColor(now),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-        ),
+        ],
       ],
     );
   }

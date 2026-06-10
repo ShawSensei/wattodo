@@ -20,7 +20,7 @@ class EmptyTaskWidget extends StatelessWidget {
             Container(
               width: 96,
               height: 96,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.surface,
                 shape: BoxShape.circle,
               ),
@@ -58,20 +58,20 @@ class EmptyTaskWidget extends StatelessWidget {
   }
 
   (IconData, String, String) _config(TaskFilter f) => switch (f) {
-        TaskFilter.all => (
-            Icons.checklist_rounded,
-            'No tasks yet',
-            'Tap the + button to add your first task and get things done.',
-          ),
-        TaskFilter.active => (
-            Icons.task_alt_rounded,
-            'All caught up!',
-            'No active tasks — everything is either done or not added yet.',
-          ),
-        TaskFilter.done => (
-            Icons.emoji_events_rounded,
-            'Nothing completed yet',
-            'Start completing tasks and they\'ll show up here.',
-          ),
-      };
+    TaskFilter.all => (
+      Icons.checklist_rounded,
+      'No tasks yet',
+      'Tap the + button to add your first task and get things done.',
+    ),
+    TaskFilter.active => (
+      Icons.task_alt_rounded,
+      'All caught up!',
+      'No active tasks — everything is either done or not added yet.',
+    ),
+    TaskFilter.done => (
+      Icons.emoji_events_rounded,
+      'Nothing completed yet',
+      'Start completing tasks and they\'ll show up here.',
+    ),
+  };
 }
