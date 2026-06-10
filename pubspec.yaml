@@ -1,0 +1,42 @@
+name: wattodo
+description: "Wattodo app - iBusinessFormula technical assessment"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  get: ^4.7.2
+
+  # DI
+  get_it: ^8.2.0
+
+  # HTTP
+  dio: ^5.9.0
+
+  # JSON
+  json_annotation: ^4.9.0
+
+  # Local storage
+  sqflite: ^2.3.0
+  path: ^1.9.0
+
+  # Utilities
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.11.1
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
